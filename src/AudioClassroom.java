@@ -8,6 +8,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -24,14 +25,16 @@ import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.TargetDataLine;
 import javax.swing.JApplet;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import com.xuggle.mediatool.IMediaReader;
 import com.xuggle.mediatool.ToolFactory;
 
-public class AudioClassroom extends JApplet implements ActionListener,
-		ChangeListener, ItemListener {
+public class AudioClassroom extends JApplet implements ActionListener, ChangeListener, ItemListener {
 
 	private static final long serialVersionUID = -9086481880151742444L;
 	// Global declarations
@@ -48,6 +51,9 @@ public class AudioClassroom extends JApplet implements ActionListener,
 	JButton play;
 	JButton stop;
 	JButton send;
+	JButton open_file;
+	JLabel choosed_file;
+	boolean file_chosed;
 
 	public void init() {
 
@@ -57,26 +63,34 @@ public class AudioClassroom extends JApplet implements ActionListener,
 		play = new JButton("Play");
 		stop = new JButton("Stop");
 		send = new JButton("send");
+		open_file = new JButton("Parcourir");
+		choosed_file = new JLabel();
 
 		record.setBounds(70, 10, 80, 25);
 		play.setBounds(155, 10, 80, 25);
 		stop.setBounds(240, 10, 80, 25);
 		send.setBounds(70, 50, 80, 25);
+		open_file.setBounds(70, 80, 100, 25);
+		choosed_file.setBounds(200, 80, 200, 25);
 
 		add(record);
 		add(play);
 		add(stop);
 		add(send);
+		add(open_file);
+		add(choosed_file);
 
 		record.setEnabled(true);
 		play.setEnabled(true);
 		stop.setEnabled(true);
 		send.setEnabled(true);
+		open_file.setEnabled(true);
 
 		record.addActionListener(this);
 		play.addActionListener(this);
 		stop.addActionListener(this);
 		send.addActionListener(this);
+		open_file.addActionListener(this);
 
 	}// End of init
 
@@ -107,16 +121,40 @@ public class AudioClassroom extends JApplet implements ActionListener,
 		} else if (e.getSource() == send) {
 
 			send.setEnabled(false);
+			UploadToServer();
 
+		} else if (e.getSource() == open_file){
+			
+			choose_file();
+			send.setEnabled(true);
 		}
-
 	}
 
 	// ************** Method Declarations ****/
 
+	public void choose_file() {
+		
+		JFileChooser chooser = new JFileChooser();
+		FileNameExtensionFilter filter = new FileNameExtensionFilter(
+ 		        "Fichiers Audio.", "au", "mp3", "wav", "m4a", "mp4");
+		//chooser.addChoosableFileFilter(filter);
+		chooser.setFileFilter(filter);
+		chooser.setDialogTitle("envoyer un fichier audio préenregistré");
+        int returnVal = chooser.showOpenDialog(getParent());
+        if(returnVal == JFileChooser.APPROVE_OPTION) {
+           System.out.println("You chose to open this file: " + chooser.getSelectedFile().getName() ); 
+           choosed_file.setText(chooser.getSelectedFile().getPath());
+           System.out.println("You chose to open this file: " + chooser.getSelectedFile().getPath());
+           file_chosed = true;
+           System.out.println("file chosed = " + file_chosed);
+        }
+		
+	}
+
 	private void recordAudio() {
 
 		first = true;
+		file_chosed = false;
 
 		try {
 
@@ -252,15 +290,27 @@ public class AudioClassroom extends JApplet implements ActionListener,
 	}// End of StopAudio
 
 	public void UploadToServer() {
-
+		File file = null;
 		try {
-			File file = new File("record.mp3");
+			if (file_chosed)
+			{
+				file = new File(choosed_file.getText());
+		           System.out.println("le fichier choisi est " + choosed_file.getText()); 
+
+			}
+			else
+			{
+				file = new File("record.mp3");
+		           System.out.println("le fichier choisi est record.mp3 "); 
+
+			}
+			
 
 			FileInputStream in = new FileInputStream(file);
 			byte[] buf = new byte[in.available()];
 			int bytesread = 0;
 
-			String ServerLink = "http://localhost:8085/test/";
+			String ServerLink = "http://localhost:80/test/";
 
 			URL URLConnectionToUpload = new URL(ServerLink);
 			URLConnection ConnectionToUpload = URLConnectionToUpload
