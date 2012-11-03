@@ -1,8 +1,8 @@
-h1. AudioclassroomApplet
+= AudioclassroomApplet
 
 AudioClassroomApplet is an Applet who permit to AudioClassroom project to record, save and upload the work of a student. This applet is the most important thing in the AudioClassroom project.
 
-h2. requirement
+== Requirement
 
 This application requires:
 
