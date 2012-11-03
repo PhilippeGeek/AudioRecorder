@@ -55,7 +55,7 @@ public class AudioRecorder extends JApplet implements ActionListener,
 	JButton send;
 	JButton open_file;
 	JLabel choosed_file;
-	boolean file_chosed=false;
+	boolean file_chosed = false;
 
 	public void init() {
 
@@ -107,10 +107,14 @@ public class AudioRecorder extends JApplet implements ActionListener,
 			send.setEnabled(false);
 			recordAudio();
 		} else if (e.getSource() == play) {
-			stop.setEnabled(true);
-			send.setEnabled(false);
-			if (first) {
-				playAudio();
+			if (file_chosed) {
+				playFile(choosed_file.getText());
+			} else {
+				stop.setEnabled(true);
+				send.setEnabled(false);
+				if (first) {
+					playAudio();
+				}
 			}
 		} else if (e.getSource() == stop) {
 			record.setEnabled(true);
@@ -138,7 +142,7 @@ public class AudioRecorder extends JApplet implements ActionListener,
 
 		JFileChooser chooser = new JFileChooser();
 		FileNameExtensionFilter filter = new FileNameExtensionFilter(
-				"Fichiers Audio.", "au", "mp3", "wav", "m4a", "mp4","flac");
+				"Fichiers Audio.", "au", "mp3", "wav", "m4a", "mp4", "flac");
 		// chooser.addChoosableFileFilter(filter);
 		chooser.setFileFilter(filter);
 		chooser.setDialogTitle("envoyer un fichier audio préenregistré");
@@ -215,91 +219,84 @@ public class AudioRecorder extends JApplet implements ActionListener,
 	}// End of RecordAudio method
 
 	private void playAudio() {
-		if (file_chosed) {
-			
-			playFile(choosed_file.getText());
 
-		} else {
+		try {
 
-			try {
+			byte audio[] = out.toByteArray();
+			InputStream input = new ByteArrayInputStream(audio);
+			final AudioFormat format = getFormat();
+			final AudioInputStream ais = new AudioInputStream(input, format,
+					audio.length / format.getFrameSize());
+			DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
+			sline = (SourceDataLine) AudioSystem.getLine(info);
+			sline.open(format);
+			sline.start();
+			Float audioLen = (audio.length / format.getFrameSize())
+					* format.getFrameRate();
 
-				byte audio[] = out.toByteArray();
-				InputStream input = new ByteArrayInputStream(audio);
-				final AudioFormat format = getFormat();
-				final AudioInputStream ais = new AudioInputStream(input,
-						format, audio.length / format.getFrameSize());
-				DataLine.Info info = new DataLine.Info(SourceDataLine.class,
-						format);
-				sline = (SourceDataLine) AudioSystem.getLine(info);
-				sline.open(format);
-				sline.start();
-				Float audioLen = (audio.length / format.getFrameSize())
-						* format.getFrameRate();
+			Runnable runner = new Runnable() {
+				int bufferSize = (int) format.getSampleRate()
+						* format.getFrameSize();
+				byte buffer[] = new byte[bufferSize];
 
-				Runnable runner = new Runnable() {
-					int bufferSize = (int) format.getSampleRate()
-							* format.getFrameSize();
-					byte buffer[] = new byte[bufferSize];
+				public void run() {
 
-					public void run() {
+					try {
 
-						try {
+						int count;
+						synchronized (lock) {
+							while ((count = ais.read(buffer, 0, buffer.length)) != -1) {
 
-							int count;
-							synchronized (lock) {
-								while ((count = ais.read(buffer, 0,
-										buffer.length)) != -1) {
+								while (paused) {
 
-									while (paused) {
+									if (sline.isRunning()) {
 
-										if (sline.isRunning()) {
-
-											sline.stop();
-										}
-										try {
-
-											lock.wait();
-										} catch (InterruptedException e) {
-										}
+										sline.stop();
 									}
-									if (!sline.isRunning()) {
+									try {
 
-										sline.start();
-									}
-									if (count > 0) {
-										sline.write(buffer, 0, count);
+										lock.wait();
+									} catch (InterruptedException e) {
 									}
 								}
-							}
-							first = true;
-							sline.drain();
-							sline.close();
-						} catch (IOException e) {
-							System.err.println("I/O problems:" + e);
-							System.exit(-3);
-						}
-					}
-				};
+								if (!sline.isRunning()) {
 
-				Thread playThread = new Thread(runner);
-				playThread.start();
-			} catch (LineUnavailableException e) {
-				System.exit(-4);
-			}
+									sline.start();
+								}
+								if (count > 0) {
+									sline.write(buffer, 0, count);
+								}
+							}
+						}
+						first = true;
+						sline.drain();
+						sline.close();
+					} catch (IOException e) {
+						System.err.println("I/O problems:" + e);
+						System.exit(-3);
+					}
+				}
+			};
+
+			Thread playThread = new Thread(runner);
+			playThread.start();
+		} catch (LineUnavailableException e) {
+			System.exit(-4);
 		}
 
 	}// End of PlayAudio method
-	
-	public void playFile(String url)
-	{
+
+	public void playFile(String url) {
+		System.out.println("lancement du fichier");
+		
 		IMediaReader reader = ToolFactory.makeReader(url);
-		
+
 		reader.addListener(ToolFactory.makeViewer(IMediaViewer.Mode.AUDIO_ONLY));
-		
+
 		while (reader.readPacket() == null)
-		      do {} while(false);
-		 
-		
+			do {
+			} while (false);
+
 	}
 
 	private void stopAudio() {
@@ -354,8 +351,7 @@ public class AudioRecorder extends JApplet implements ActionListener,
 
 			DataInputStream inputFromClient = new DataInputStream(
 					ConnectionToUpload.getInputStream());
-			// get what you want from servlet
-			// .......
+
 			inputFromClient.close();
 		} catch (Exception e) {
 			e.printStackTrace();
