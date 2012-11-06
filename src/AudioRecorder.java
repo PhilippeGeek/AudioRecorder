@@ -32,10 +32,8 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import com.xuggle.mediatool.IMediaReader;
 import com.xuggle.mediatool.IMediaViewer;
-import com.xuggle.mediatool.IMediaWriter;
 import com.xuggle.mediatool.ToolFactory;
-import com.xuggle.xuggler.IAudioSamples;
-import com.xuggle.xuggler.IContainer;
+
 
 public class AudioRecorder extends JApplet implements ActionListener,
         ChangeListener, ItemListener {
@@ -122,14 +120,22 @@ public class AudioRecorder extends JApplet implements ActionListener,
                 }
             }
         } else if (e.getSource() == stop) {
-            reader = null;
+            if (file_chosed)
+            {
+                reader.close();
+            }
+            else {
+
+                running = false;
+                stopAudio();
+                saveAudio();
+
+            }
             record.setEnabled(true);
             stop.setEnabled(false);
             play.setEnabled(true);
             send.setEnabled(true);
-            running = false;
-            stopAudio();
-            saveAudio();
+
         } else if (e.getSource() == send) {
 
             send.setEnabled(false);
@@ -148,7 +154,6 @@ public class AudioRecorder extends JApplet implements ActionListener,
 
         JFileChooser chooser = new JFileChooser();
         FileNameExtensionFilter filter = new FileNameExtensionFilter("Fichiers Audio.", "au", "mp3", "wav", "m4a", "mp4", "flac");
-        // chooser.addChoosableFileFilter(filter);
         chooser.setFileFilter(filter);
         chooser.setDialogTitle("envoyer un fichier audio préenregistré");
         int returnVal = chooser.showOpenDialog(getParent());
@@ -284,8 +289,7 @@ public class AudioRecorder extends JApplet implements ActionListener,
 
 
         System.out.println("lancement du fichier");
-
-        reader = ToolFactory.makeReader(url);
+         reader =  ToolFactory.makeReader(choosed_file.getText());
         Thread thread = new PlayFileThread();
         thread.start();
 
