@@ -2,10 +2,11 @@
 *.jar
 *.war
 *.ear
-*.classpath
-*.project
+.classpath
+.project
 .settings
 *.iml
 .idea
 *~
-
+out
+bin
